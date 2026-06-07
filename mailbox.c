@@ -483,6 +483,56 @@ struct mbox_chan *mbox_request_channel_byname(struct mbox_client *cl,
 EXPORT_SYMBOL_GPL(mbox_request_channel_byname);
 
 /**
+ * mbox_request_channel_bydev - Request a mailbox channel by controller device.
+ * @cl:		Identity of the client requesting the channel.
+ * @mbox_dev:	Device of the mailbox controller.
+ * @index:	Channel index within the controller.
+ *
+ * Like mbox_request_channel() but locates the controller by its device pointer
+ * rather than a firmware node property. Intended for platforms (e.g. ACPI)
+ * where the consumer-to-controller relationship cannot be expressed as a
+ * firmware node reference and must be resolved by the caller through
+ * platform-specific means.
+ *
+ * Return: Pointer to the channel assigned to the client if successful.
+ *		ERR_PTR for request failure.
+ */
+struct mbox_chan *mbox_request_channel_bydev(struct mbox_client *cl,
+					     struct device *mbox_dev, int index)
+{
+	struct mbox_controller *mbox;
+	struct mbox_chan *chan;
+	int ret;
+
+	if (!cl->dev || !mbox_dev)
+		return ERR_PTR(-EINVAL);
+
+	scoped_guard(mutex, &con_mutex) {
+		chan = ERR_PTR(-EPROBE_DEFER);
+		list_for_each_entry(mbox, &mbox_cons, node) {
+			if (mbox->dev != mbox_dev)
+				continue;
+			if (index >= mbox->num_chans) {
+				chan = ERR_PTR(-EINVAL);
+				break;
+			}
+			chan = &mbox->chans[index];
+			break;
+		}
+
+		if (IS_ERR(chan))
+			return chan;
+
+		ret = __mbox_bind_client(chan, cl);
+		if (ret)
+			chan = ERR_PTR(ret);
+	}
+
+	return chan;
+}
+EXPORT_SYMBOL_GPL(mbox_request_channel_bydev);
+
+/**
  * mbox_free_channel - The client relinquishes control of a mailbox
  *			channel by this call.
  * @chan: The mailbox channel to be freed.
