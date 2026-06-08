@@ -6,6 +6,7 @@
  * Author: Jassi Brar <jassisinghbrar@gmail.com>
  */
 
+#include <linux/acpi.h>
 #include <linux/cleanup.h>
 #include <linux/delay.h>
 #include <linux/device.h>
