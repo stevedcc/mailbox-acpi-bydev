@@ -387,7 +387,6 @@ int mbox_bind_client(struct mbox_chan *chan, struct mbox_client *cl)
 }
 EXPORT_SYMBOL_GPL(mbox_bind_client);
 
-/**
 #ifdef CONFIG_ACPI
 /*
  * ACPI does not have a "mboxes" phandle property, so mbox_request_channel()
@@ -420,7 +419,8 @@ static struct mbox_chan *mbox_request_channel_acpi(struct mbox_client *cl,
 		struct acpi_device *dep_adev;
 		struct device *dep_dev;
 
-		if (acpi_bus_get_device(dep_list.handles[i], &dep_adev))
+		dep_adev = acpi_fetch_acpi_dev(dep_list.handles[i]);
+		if (!dep_adev)
 			continue;
 		dep_dev = acpi_get_first_physical_node(dep_adev);
 		if (!dep_dev)
@@ -448,6 +448,7 @@ static struct mbox_chan *mbox_request_channel_acpi(struct mbox_client *cl,
 }
 #endif /* CONFIG_ACPI */
 
+/**
  * mbox_request_channel - Request a mailbox channel.
  * @cl: Identity of the client requesting the channel.
  * @index: Index of mailbox specifier in 'mboxes' property.
